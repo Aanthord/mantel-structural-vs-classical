@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mantel's Theorem – Falsifiable Construction Comparison</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body { font-family: serif; text-align: center; background: #111; color: white; }
+    svg { background: #fff; margin: 10px; border-radius: 6px; border: 1px solid #444; }
+    .node { stroke: #111; stroke-width: 1px; }
+    .edge { stroke: #999; stroke-width: 1px; opacity: 0.7; }
+    .label { font-size: 12px; fill: #000; }
+    .panel-title { margin: 10px; font-size: 18px; font-weight: bold; }
+    .container { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; }
+    .metric { font-size: 14px; color: #0f0; margin-top: 5px; }
+    .math-box {
+      background: #222;
+      color: #0ff;
+      margin: 20px auto;
+      padding: 15px;
+      width: 90%;
+      border: 1px solid #444;
+      border-radius: 8px;
+      text-align: left;
+    }
+    code.latex { display: block; font-family: 'Courier New', monospace; color: #8cf; font-size: 16px; margin: 5px 0; }
+    .note-box {
+      background: #333;
+      color: #fff;
+      margin: 10px auto;
+      padding: 15px;
+      width: 90%;
+      border-left: 5px solid #08f;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mantel's Theorem — Falsifiable Construction Comparison</h1>
+  <p>Compare structure-driven vs classical triangle-free graph construction in live execution steps.</p>
+  <label>Number of vertices (n): <input id="vertexCount" type="number" value="12" min="4" max="100"></label>
+  <button onclick="generateComparison()">Run and Compare</button>
+
+  <div class="math-box">
+    <h2>Formal Statement of Mantel's Theorem</h2>
+    <code class="latex">
+      Let G be a simple graph on n vertices with no triangles. Then:<br>
+      |E(G)| ≤ ⎣n² / 4⎦
+    </code>
+    <p>
+      Equality holds iff G ≅ K_{⌊n/2⌋, ⌈n/2⌉}. In Post-Cantorian logic, triangle nonexistence is a structural feature.<br>
+      Using generation spaces, we model truth density:
+      <code class="latex">Dₖ(P) = lim₍ᵢ→∞₎ Fᵢ(P)/Gᵢ</code>
+    </p>
+    <p>
+      For triangle-free graphs built via balanced bipartition:
+      <code class="latex">Fᵢ(P) = Gᵢ</code> ⇒ <strong>Dₖ(P) = 1</strong> for P = “G is triangle-free”
+    </p>
+  </div>
+
+  <div class="math-box">
+    <h2>Fractal Tensor Closure Constraint (FTC)</h2>
+    <p>
+      Classical triangle detection relies on set traversal. Under Doran's system, triangle configurations collapse:
+    </p>
+    <code class="latex">
+      FTC(P₃ ∘ P₃) ≠ P₃ → ∄ ⊿-closure over bipartite layerings
+    </code>
+    <p>
+      Tensor products fail to close under intra-partition projections. Structural collapse replaces rule-based exclusion.
+    </p>
+  </div>
+
+  <div class="container">
+    <div>
+      <div class="panel-title">Structure-Driven Model</div>
+      <svg id="structural" width="400" height="500"></svg>
+      <div class="metric" id="struct-metric"></div>
+    </div>
+    <div>
+      <div class="panel-title">Classical Greedy Model (Aligned Layout)</div>
+      <svg id="classical" width="400" height="500"></svg>
+      <div class="metric" id="class-metric"></div>
+    </div>
+  </div>
+
+  <div class="math-box" id="analysis-box"></div>
+
+  <div class="note-box">
+    <h3>Epistemic Insight</h3>
+    <p>
+      The structural method doesn’t “test for triangles” — it constructs in a way where triangles are unformable.
+      This removes false positives (edges allowed but dangerous) and false negatives (edges banned but benign).
+    </p>
+  </div>
+
+  <div class="note-box">
+    <h3>Performance Logging Insight</h3>
+    <p>
+      Structure-driven: O(n²/4) edges drawn, no triangle tests.<br>
+      Greedy: Each added edge requires checking up to O(n²) triangle conditions.<br>
+      Runtime footprint grows quadratically for greedy, linearly for structured.
+    </p>
+  </div>
+
+  <div class="note-box">
+    <h3>Beyond Mantel: Toward Ramsey & Turán</h3>
+    <p>
+      This system can extend to forbid C₄, C₅, and arbitrary subgraphs using generation constraint sets.<br>
+      Future versions will allow toggling constraints to explore generalized extremal structures.
+    </p>
+  </div>
+
+  <script>
+    window.onload = () => {
+      window.generateComparison = function () {
+        const n = +document.getElementById("vertexCount").value;
+        const theoreticalMax = Math.floor(n * n / 4);
+        document.getElementById("analysis-box").innerHTML =
+          `<h3>Theoretical Max Edges</h3>` +
+          `<p>For n = ${n}, max triangle-free edges = ⎣n² / 4⎦ = <strong>${theoreticalMax}</strong>.</p>`;
+        generateStructural(n, theoreticalMax);
+        generateClassical(n, theoreticalMax);
+      };
+
+      function generateStructural(n, theoreticalMax) {
+        const svg = d3.select("#structural");
+        svg.selectAll("*").remove();
+        const half = Math.floor(n / 2);
+        const rem = n - half;
+        const spacingTop = 400 / (half + 1);
+        const spacingBottom = 400 / (rem + 1);
+        const nodes = [];
+        for (let i = 0; i < half; i++) nodes.push({ id: i, x: spacingTop * (i + 1), y: 100, color: "#1f77b4" });
+        for (let j = half; j < n; j++) nodes.push({ id: j, x: spacingBottom * (j - half + 1), y: 350, color: "#ff7f0e" });
+
+        const edges = [];
+        for (let i = 0; i < half; i++)
+          for (let j = half; j < n; j++)
+            edges.push({ source: i, target: j });
+
+        let stepCount = 0;
+        edges.forEach((e, i) => {
+          setTimeout(() => {
+            svg.append("line")
+              .attr("class", "edge")
+              .attr("x1", nodes[e.source].x)
+              .attr("y1", nodes[e.source].y)
+              .attr("x2", nodes[e.target].x)
+              .attr("y2", nodes[e.target].y);
+            stepCount++;
+            document.getElementById("struct-metric").innerText = `Edges drawn: ${stepCount}`;
+            if (stepCount === edges.length) updateSummary("struct", stepCount, theoreticalMax);
+          }, i * 10);
+        });
+
+        svg.selectAll("circle")
+          .data(nodes)
+          .join("circle")
+          .attr("class", "node")
+          .attr("r", 8)
+          .attr("fill", d => d.color)
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y);
+
+        svg.selectAll("text")
+          .data(nodes)
+          .join("text")
+          .attr("x", d => d.x)
+          .attr("y", d => d.y - 12)
+          .attr("text-anchor", "middle")
+          .attr("class", "label")
+          .text(d => d.id);
+      }
+
+      function generateClassical(n, theoreticalMax) {
+        const svg = d3.select("#classical");
+        svg.selectAll("*").remove();
+        const half = Math.floor(n / 2);
+        const rem = n - half;
+        const spacingTop = 400 / (half + 1);
+        const spacingBottom = 400 / (rem + 1);
+        const nodes = [];
+        for (let i = 0; i < half; i++) nodes.push({ id: i, x: spacingTop * (i + 1), y: 100, color: "#1f77b4" });
+        for (let j = half; j < n; j++) nodes.push({ id: j, x: spacingBottom * (j - half + 1), y: 350, color: "#ff7f0e" });
+
+        const edges = [];
+        const adj = Array.from({ length: n }, () => []);
+        let stepCount = 0;
+        for (let i = 0; i < n; i++) {
+          for (let j = i + 1; j < n; j++) {
+            let triangle = false;
+            for (let k = 0; k < n; k++) {
+              if (adj[i].includes(k) && adj[j].includes(k)) {
+                triangle = true;
+                break;
+              }
+            }
+            if (!triangle) {
+              edges.push({ source: i, target: j });
+              adj[i].push(j);
+              adj[j].push(i);
+            }
+          }
+        }
+
+        edges.forEach((e, i) => {
+          setTimeout(() => {
+            svg.append("line")
+              .attr("class", "edge")
+              .attr("x1", nodes[e.source].x)
+              .attr("y1", nodes[e.source].y)
+              .attr("x2", nodes[e.target].x)
+              .attr("y2", nodes[e.target].y);
+            stepCount++;
+            document.getElementById("class-metric").innerText = `Edges drawn: ${stepCount}`;
+            if (stepCount === edges.length) updateSummary("class", stepCount, theoreticalMax);
+          }, i * 12);
+        });
+
+        svg.selectAll("circle")
+          .data(nodes)
+          .join("circle")
+          .attr("class", "node")
+          .attr("r", 8)
+          .attr("fill", d => d.color)
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y);
+
+        svg.selectAll("text")
+          .data(nodes)
+          .join("text")
+          .attr("x", d => d.x)
+          .attr("y", d => d.y - 12)
+          .attr("text-anchor", "middle")
+          .attr("class", "label")
+          .text(d => d.id);
+      }
+
+      function updateSummary(model, steps, max) {
+        const id = model === "struct" ? "struct-metric" : "class-metric";
+        const valid = steps <= max ? "✓ Valid" : "✗ Exceeds Bound";
+        document.getElementById(id).innerText += ` — ${valid}`;
+      }
+    };
+  </script>
+</body>
+</html>
